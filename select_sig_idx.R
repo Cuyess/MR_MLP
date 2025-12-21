@@ -7,12 +7,6 @@ del <- read.csv("/Users/zhaociyun/PycharmProjects/DNN MR include outer test111/e
 
 alff <- read_excel("ALFF.xlsx")
 names(alff)[-1] <- paste("alff", names(alff)[-1],sep = "_")
-falff <- read_excel("fALFF.xlsx")
-names(falff)[-1] <- paste("falff", names(falff)[-1],sep = "_")
-gmv <- read_excel("GMV.xlsx")
-names(gmv)[-1] <- paste("gmv", names(gmv)[-1],sep = "_")
-ReHo <- read_excel("ReHo.xlsx")
-names(ReHo)[-1] <- paste("ReHo", names(ReHo)[-1],sep = "_")
 scfc <- read_excel("ALFF_sc_fc_coordination.xlsx")
 names(scfc)[-1] <- paste("scfc", names(scfc)[-1],sep = "_")
 cov <- read_excel("cov.xlsx")
@@ -40,8 +34,5 @@ calc <- function(df){
 
 Data <- cov
 Data <- cbind(Data, alff[,calc(alff)])
-Data <- cbind(Data, falff[,calc(falff)])
-Data <- cbind(Data, gmv[,calc(gmv)])
-Data <- cbind(Data, ReHo[,calc(ReHo)])
 Data <- cbind(Data, scfc[,calc(scfc)])
 write.csv(Data,"fdr.csv")
