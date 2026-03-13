@@ -106,7 +106,8 @@ def load_and_prep_data():
     class_names = [c.split('_',1)[1] for c in y_onehot.columns]
     print(f"Detected Classes: {class_names}")
 
-    external_test_indices = pd.read_csv("external test.csv", header=None).values.flatten()
+    external_test_file = "external_test.csv" if os.path.exists("external_test.csv") else "external test.csv"
+    external_test_indices = pd.read_csv(external_test_file, header=None).values.flatten()
     external_test_mask = X.index.isin(external_test_indices)
     
     X_external_test = X.loc[external_test_mask]

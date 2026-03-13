@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import os
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
@@ -14,7 +15,8 @@ y = pd.get_dummies(y, prefix='Group')
 gender = pd.get_dummies(X['Gender'], prefix='Gender')
 X = X.drop(columns=['Gender'])
 
-external_test_indices = pd.read_csv("external test.csv", header=None).values.flatten()
+external_test_file = "external_test.csv" if os.path.exists("external_test.csv") else "external test.csv"
+external_test_indices = pd.read_csv(external_test_file, header=None).values.flatten()
 
 external_test_mask = X.index.isin(external_test_indices)
 X_external_test = X.loc[external_test_mask]

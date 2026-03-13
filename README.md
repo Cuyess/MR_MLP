@@ -44,7 +44,7 @@ install.packages(c("readxl", "multcomp"))
 
 按脚本逻辑，至少需要以下输入（文件名需与代码一致）：
 
-- `external test.csv`：外部测试集样本编号
+- `external_test.csv`（推荐）或 `external test.csv`（兼容）：外部测试集样本编号
 - R 步骤需要的原始表格（如 `ALFF.xlsx`、`ALFF_sc_fc_coordination.xlsx`、`cov.xlsx`）
 - SHAP 与脑图步骤还需要：
   - `final_model.keras`
@@ -136,8 +136,8 @@ python brainmap.py
 **Q1：运行 `select_sig_idx.R` 报路径错误？**  
 A：脚本中写了作者本地绝对路径，请改为你本机路径或相对路径后再运行。
 
-**Q2：为什么 `external test.csv` 文件名有空格？**  
-A：当前代码就是按这个文件名读取（见 `MLP.py` 与 `MLP_repeat50.py`），如重命名请同步修改脚本。
+**Q2：外部测试索引文件应该叫什么名字？**  
+A：推荐使用 `external_test.csv`。当前代码也兼容旧命名 `external test.csv`。
 
 **Q3：只想先看模型性能图，不做 SHAP 可以吗？**  
 A：可以。先执行 Step 1~3，即可得到 ROC 和混淆矩阵图（`Figure2_MeanOnly_CustomColor.*`）。
