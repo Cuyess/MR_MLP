@@ -58,6 +58,16 @@ install.packages(c("readxl", "multcomp"))
 
 ## 4. 推荐执行顺序
 
+### 一键快速开始（最常用）
+
+```bash
+Rscript select_sig_idx.R
+python MLP_repeat50.py
+python plot_MLP.py
+```
+
+> 上面 3 步可先完成“特征筛选 + 训练评估 + Figure2 绘图”主流程。
+
 ### Step 1) R 特征筛选
 
 ```bash
@@ -118,3 +128,16 @@ python brainmap.py
 
 - 当前仓库未配置自动化测试、lint 或 CI 工作流。
 - 脚本以“论文复现实验脚本”风格编写，部分输入文件名和路径是固定写法；如用于新数据，请先统一路径与字段名。
+
+---
+
+## 6. 常见问题（FAQ）
+
+**Q1：运行 `select_sig_idx.R` 报路径错误？**  
+A：脚本中写了作者本地绝对路径，请改为你本机路径或相对路径后再运行。
+
+**Q2：为什么 `external test.csv` 文件名有空格？**  
+A：当前代码就是按这个文件名读取（见 `MLP.py` 与 `MLP_repeat50.py`），如重命名请同步修改脚本。
+
+**Q3：只想先看模型性能图，不做 SHAP 可以吗？**  
+A：可以。先执行 Step 1~3，即可得到 ROC 和混淆矩阵图（`Figure2_MeanOnly_CustomColor.*`）。
