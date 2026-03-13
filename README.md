@@ -1,38 +1,38 @@
 # MR_MLP
 
-基于 MLP 的脑影像三分类分析流程（TRD / nTRD / HC），包含：
+An MLP-based neuroimaging three-classification pipeline (TRD / nTRD / HC), including:
 
-- **R 侧特征筛选**（ANCOVA + FDR）
-- **Python 侧建模与验证**（Optuna + SMOTE + 50 次重复）
-- **可解释性分析**（SHAP）
-- **结果可视化**（ROC、混淆矩阵、脑图）
+- **R-side feature selection** (ANCOVA + FDR)
+- **Python-side modeling and validation** (Optuna + SMOTE + 50 repeats)
+- **Interpretability analysis** (SHAP)
+- **Result visualization** (ROC, confusion matrix, brain maps)
 
 ---
 
-## 1. 项目文件说明
+## 1. Project Files
 
-| 文件 | 作用 |
+| File | Purpose |
 | :--- | :--- |
-| `select_sig_idx.R` | 从原始特征中做显著性筛选，输出 `fdr.csv`（后续 Python 训练输入）。 |
-| `MLP.py` | MLP 训练与基础评估脚本（较简版流程）。 |
-| `MLP_repeat50.py` | 主流程脚本：数据划分、标准化、SMOTE、Optuna 调参、5-fold 集成、重复 50 次并汇总结果。 |
-| `plot_MLP.py` | 读取模型输出，绘制 ROC 曲线与混淆矩阵图。 |
-| `calc_SHAP.py` | 加载训练好的模型与数据，计算 SHAP 并导出 `real_shap.csv`。 |
-| `brainmap.py` | 基于 `real_shap.csv` 和脑图谱信息绘制脑区可视化。 |
+| `select_sig_idx.R` | Performs significance filtering from raw features and outputs `fdr.csv` (input for Python training). |
+| `MLP.py` | MLP training and basic evaluation script (simplified workflow). |
+| `MLP_repeat50.py` | Main workflow: split data, standardize, SMOTE, Optuna tuning, 5-fold ensemble, repeat 50 times, and summarize outputs. |
+| `plot_MLP.py` | Loads model outputs and plots ROC curves plus confusion matrices. |
+| `calc_SHAP.py` | Loads a trained model and data, computes SHAP, and exports `real_shap.csv`. |
+| `brainmap.py` | Builds brain-region visualizations from `real_shap.csv` and atlas metadata. |
 
 ---
 
-## 2. 运行环境
+## 2. Environment
 
-本仓库未提供 `requirements.txt`，可按代码依赖手动安装。
+This repository does not include `requirements.txt`. Install dependencies manually based on script imports.
 
-### Python 依赖
+### Python dependencies
 
 ```bash
 pip install pandas numpy tensorflow scikit-learn optuna imbalanced-learn shap matplotlib seaborn nilearn openpyxl
 ```
 
-### R 依赖
+### R dependencies
 
 ```r
 install.packages(c("readxl", "multcomp"))
@@ -40,28 +40,28 @@ install.packages(c("readxl", "multcomp"))
 
 ---
 
-## 3. 数据与文件准备
+## 3. Required Data and Files
 
-按脚本逻辑，至少需要以下输入（文件名需与代码一致）：
+At minimum, prepare the following inputs (filenames should match script expectations):
 
-- `external_test.csv`（推荐）或 `external test.csv`（兼容）：外部测试集样本编号  
-  （推荐下划线命名，避免文件名空格在命令行或跨平台环境中带来的路径转义问题）
-- R 步骤需要的原始表格（如 `ALFF.xlsx`、`ALFF_sc_fc_coordination.xlsx`、`cov.xlsx`）
-- SHAP 与脑图步骤还需要：
+- `external_test.csv` (recommended) or `external test.csv` (legacy-compatible): external test sample IDs  
+  (underscore naming is recommended to avoid shell/path escaping issues on different platforms)
+- Raw tables for the R step (for example: `ALFF.xlsx`, `ALFF_sc_fc_coordination.xlsx`, `cov.xlsx`)
+- SHAP and brain-map steps additionally require:
   - `final_model.keras`
   - `X_train.npy`, `X_outer_test.npy`, `y_outer_test.npy`, `lable.npy`
   - `BrainnetomeAtlas_BNA_subregions.xlsx`
   - `brainmap_python/ALFF.nii`, `brainmap_python/SFC.nii`
 
-> 说明：`final_model.keras` 与上述 `.npy` 文件需由你现有训练流程导出或手动准备；当前仓库脚本默认直接读取这些文件。
+> Note: `final_model.keras` and the `.npy` files above must be produced by your existing training workflow or prepared manually. Current scripts read them directly.
 
-> 注意：`select_sig_idx.R` 中包含作者本地绝对路径（`setwd(...)` 和部分读文件路径），使用前请改为你自己的路径或相对路径。
+> Note: `select_sig_idx.R` still contains author-local absolute paths (`setwd(...)` and some read paths). Update them to your own local paths or relative paths before running.
 
 ---
 
-## 4. 推荐执行顺序
+## 4. Recommended Execution Order
 
-### 一键快速开始（最常用）
+### Quickstart (most common)
 
 ```bash
 Rscript select_sig_idx.R
@@ -69,78 +69,94 @@ python MLP_repeat50.py
 python plot_MLP.py
 ```
 
-> 上面 3 步可先完成“特征筛选 + 训练评估 + Figure2 绘图”主流程。
+> These 3 steps cover the core workflow: feature filtering + model evaluation + Figure 2 plotting.
 
-### Step 1) R 特征筛选
+### Step 1) R feature selection
 
 ```bash
 Rscript select_sig_idx.R
 ```
 
-输出：`fdr.csv`
+Output: `fdr.csv`
 
-### Step 2) Python 训练与验证（主流程）
+### Step 2) Python training and validation (main workflow)
 
 ```bash
 python MLP_repeat50.py
 ```
 
-主要输出：
+Main outputs:
 
 - `roc_curves_data.npy`
 - `model1_repeat50_summary.csv`
 - `confusion_matrix_stats.csv`
 
-> 如需简化版流程，可运行 `python MLP.py`。
+> For a simpler workflow, run `python MLP.py`.
 
-### Step 3) 结果图（ROC / 混淆矩阵）
+### Step 3) Result figures (ROC / confusion matrix)
 
 ```bash
 python plot_MLP.py
 ```
 
-主要输出：
+Main outputs:
 
 - `Figure2_MeanOnly_CustomColor.pdf`
 - `Figure2_MeanOnly_CustomColor.png`
 
-### Step 4) SHAP 计算
+### Step 4) SHAP calculation
 
 ```bash
 python calc_SHAP.py
 ```
 
-主要输出：
+Main outputs:
 
 - `shap.npy`
 - `real_shap.csv`
 
-### Step 5) 脑图可视化
+### Step 5) Brain-map visualization
 
 ```bash
 python brainmap.py
 ```
 
-主要输出目录：
+Main output directory:
 
 - `visualization_results/brain_visualization/`
 
 ---
 
-## 5. 说明
+## 5. Notes
 
-- 当前仓库未配置自动化测试、lint 或 CI 工作流。
-- 脚本以“论文复现实验脚本”风格编写，部分输入文件名和路径是固定写法；如用于新数据，请先统一路径与字段名。
+- This repository currently has no automated tests, lints, or CI workflow configured.
+- Scripts were written in a paper-reproduction style. Some input filenames and paths are fixed. For new datasets, first standardize paths and column names.
 
 ---
 
-## 6. 常见问题（FAQ）
+## 6. FAQ
 
-**Q1：运行 `select_sig_idx.R` 报路径错误？**  
-A：脚本中写了作者本地绝对路径，请改为你本机路径或相对路径后再运行。
+**Q1: `select_sig_idx.R` fails with path errors. Why?**  
+A: The script includes author-local absolute paths. Replace them with your own local paths or relative paths.
 
-**Q2：外部测试索引文件应该叫什么名字？**  
-A：推荐使用 `external_test.csv`。当前代码也兼容旧命名 `external test.csv`。
+**Q2: What should the external test index filename be?**  
+A: `external_test.csv` is recommended. Current code also supports legacy `external test.csv`.
 
-**Q3：只想先看模型性能图，不做 SHAP 可以吗？**  
-A：可以。先执行 Step 1~3，即可得到 ROC 和混淆矩阵图（`Figure2_MeanOnly_CustomColor.*`）。
+**Q3: Can I skip SHAP and only generate model performance figures?**  
+A: Yes. Run only Steps 1–3 to obtain ROC and confusion matrix figures (`Figure2_MeanOnly_CustomColor.*`).
+
+**Q4: Why can I see changes in the Pull Request, but not in the Code tab?**  
+A: The **Code** tab usually shows the repository default branch (often `main`), while your PR changes are on a feature branch. Until merged, those edits may not appear in default-branch Code view.
+
+Use one of these methods to view/edit updated files:
+
+1. In GitHub UI, switch branch in the branch dropdown (top-left in Code view) to your PR branch.
+2. In your local repo, checkout the PR branch:
+
+```bash
+git fetch origin
+git checkout copilot/rewrite-readme-file
+git pull
+```
+
+Then open and edit `/home/runner/work/MR_MLP/MR_MLP/README.md` (or any changed file), commit to the same branch, and push.

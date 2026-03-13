@@ -92,7 +92,7 @@ def evaluate_mlp(trial):
 
     kf = KFold(n_splits=5, shuffle=True, random_state=123)
     cv_scores = []
-    for train_index, val_index in kf.split(X_train_resampled, y_train_resampled):  # 使用SMOTE增强后的数据
+    for train_index, val_index in kf.split(X_train_resampled, y_train_resampled):  # Use SMOTE-augmented data
         X_train_fold, X_val_fold = X_train_resampled.iloc[train_index], X_train_resampled.iloc[val_index]
         y_train_fold, y_val_fold = y_train_resampled[train_index], y_train_resampled[val_index]
 
