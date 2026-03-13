@@ -53,6 +53,8 @@ install.packages(c("readxl", "multcomp"))
   - `BrainnetomeAtlas_BNA_subregions.xlsx`
   - `brainmap_python/ALFF.nii`, `brainmap_python/SFC.nii`
 
+> 说明：`final_model.keras` 与上述 `.npy` 文件需由你现有训练流程导出或手动准备；当前仓库脚本默认直接读取这些文件。
+
 > 注意：`select_sig_idx.R` 中包含作者本地绝对路径（`setwd(...)` 和部分读文件路径），使用前请改为你自己的路径或相对路径。
 
 ---
