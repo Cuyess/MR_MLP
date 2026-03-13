@@ -9,12 +9,12 @@ import optuna
 import sys
 import os
 
-# 1. 环境设置
+# 1. Environment setup
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.get_logger().setLevel('ERROR')
 
 # ==========================================
-# 模型定义
+# Model definition
 # ==========================================
 def create_mlp(input_dim, hidden_layer_size=64, dropout_rate=0.4, learning_rate=1e-3, l2_reg=1e-4):
     model = tf.keras.Sequential([
@@ -29,10 +29,10 @@ def create_mlp(input_dim, hidden_layer_size=64, dropout_rate=0.4, learning_rate=
     return model
 
 # ==========================================
-# 辅助计算函数
+# Helper metric functions
 # ==========================================
 def compute_binary_metrics(y_true, y_pred):
-    # y_true, y_pred 均为 0/1 数组
+    # y_true and y_pred are both 0/1 arrays
     tp = int(((y_true == 1) & (y_pred == 1)).sum())
     tn = int(((y_true == 0) & (y_pred == 0)).sum())
     fp = int(((y_true == 0) & (y_pred == 1)).sum())
@@ -72,11 +72,11 @@ def safe_auc(y_true, y_score):
         return float('nan')
 
 # ==========================================
-# 数据加载与预处理 (含标签映射修复)
+# Data loading and preprocessing (with label-mapping fix)
 # ==========================================
 def load_and_prep_data():
     print("Loading data...")
-    # 兼容编码问题
+    # Handle potential encoding issues
     try:
         df = pd.read_csv("fdr.csv", index_col=0)
     except UnicodeDecodeError:
@@ -85,7 +85,7 @@ def load_and_prep_data():
     df.index = df['编号']
     y_df, X = df['Group'], df.iloc[:, 2:]
 
-    # [关键] 标签映射：1->TRD, 2->nTRD, 3->HC
+    # [Key] Label mapping: 1->TRD, 2->nTRD, 3->HC
     label_mapping = {
         1: 'TRD', 2: 'nTRD', 3: 'HC',
         '1': 'TRD', '2': 'nTRD', '3': 'HC'
@@ -93,7 +93,7 @@ def load_and_prep_data():
     y_df = y_df.map(label_mapping)
     
     if y_df.isna().any():
-        print("Error: Group 列中包含无法识别的标签 (非 1, 2, 3)")
+        print("Error: Unrecognized labels found in Group column (expected 1, 2, 3)")
         sys.exit(1)
     
     if 'Gender' in X.columns:
@@ -106,7 +106,13 @@ def load_and_prep_data():
     class_names = [c.split('_',1)[1] for c in y_onehot.columns]
     print(f"Detected Classes: {class_names}")
 
-    external_test_indices = pd.read_csv("external test.csv", header=None).values.flatten()
+    if os.path.exists("external_test.csv"):
+        external_test_file = "external_test.csv"
+    elif os.path.exists("external test.csv"):
+        external_test_file = "external test.csv"
+    else:
+        raise FileNotFoundError("Missing external test index file. Expected 'external_test.csv' or 'external test.csv'.")
+    external_test_indices = pd.read_csv(external_test_file, header=None).values.flatten()
     external_test_mask = X.index.isin(external_test_indices)
     
     X_external_test = X.loc[external_test_mask]
@@ -136,18 +142,18 @@ def load_and_prep_data():
             class_names)
 
 # ==========================================
-# Optuna 优化函数
+# Optuna optimization function
 # ==========================================
 def run_optuna_search(X_train, y_train, n_trials=50):
     print(f"\n[Optuna] Starting hyperparameter search with {n_trials} trials...")
     
-    # 预先 SMOTE 以加速 Optuna 搜索（正式训练时会在循环内做）
+    # Apply SMOTE in advance to speed up Optuna search (official training still applies it in-loop)
     sm_opt = SMOTE(random_state=123)
     X_res, y_res = sm_opt.fit_resample(X_train, np.argmax(y_train.values, axis=1))
     X_res = pd.DataFrame(X_res, columns=X_train.columns)
     y_res_series = pd.Series(y_res)
     
-    # 获取类别数
+    # Get number of classes
     n_classes = y_train.shape[1]
 
     def objective(trial):
@@ -158,7 +164,7 @@ def run_optuna_search(X_train, y_train, n_trials=50):
         epochs = trial.suggest_int('epochs', 20, 100)
         batch_size = trial.suggest_int('batch_size', 16, 128)
         
-        # 使用 3-Fold CV 快速评估
+        # Use 3-fold CV for quick evaluation
         kf = KFold(n_splits=3, shuffle=True, random_state=123)
         scores = []
         
@@ -174,16 +180,16 @@ def run_optuna_search(X_train, y_train, n_trials=50):
             model.fit(X_tr, y_tr_oh, epochs=epochs, batch_size=batch_size, 
                       validation_data=(X_val, y_val_oh), callbacks=[es], verbose=0)
             
-            # 使用 Macro AUC 作为优化目标
+            # Use Macro AUC as the optimization objective
             preds = model.predict(X_val, verbose=0)
             try:
-                # 简单计算 Macro AUC
+                # Compute Macro AUC directly
                 aucs = []
                 for c in range(n_classes):
                     aucs.append(roc_auc_score((y_val == c).astype(int), preds[:, c]))
                 scores.append(np.mean(aucs))
             except:
-                scores.append(0.5) # 失败惩罚
+                scores.append(0.5) # Failure penalty
         
         return np.mean(scores)
 
@@ -194,45 +200,45 @@ def run_optuna_search(X_train, y_train, n_trials=50):
     return study.best_params
 
 # ==========================================
-# 主运行逻辑
+# Main execution logic
 # ==========================================
 def main(n_repeats=50, do_optuna=True):
-    # 1. 加载数据
+    # 1. Load data
     data = load_and_prep_data()
     X_train_s, y_train, X_int_test_s, y_int_test, X_ext_test_s, y_ext_test, class_names = data
     
-    # 2. 确定超参数
+    # 2. Determine hyperparameters
     if do_optuna:
-        best_params = run_optuna_search(X_train_s, y_train, n_trials=50) # 这里的 trial 次数可以调整
+        best_params = run_optuna_search(X_train_s, y_train, n_trials=50) # Number of trials can be adjusted here
     else:
-        # 如果不跑 optuna，使用默认参数
+        # If Optuna is disabled, use default parameters
         best_params = {
             'hidden_layer_size': 64, 'dropout_rate': 0.4, 'learning_rate': 1e-3, 
             'l2_reg': 1e-4, 'epochs': 50, 'batch_size': 32
         }
     
-    # 补全可能缺失的参数
+    # Fill in any missing parameters
     defaults = {'patience': 5, 'epochs': 50, 'batch_size': 32}
     for k, v in defaults.items():
         if k not in best_params: best_params[k] = v
             
     print(f"\n[Execution] Starting {n_repeats} runs using params: {best_params}\n")
 
-    # 3. 初始化存储容器
+    # 3. Initialize storage containers
     results_internal = {k: [] for k in ['Macro Average', 'TRD vs nTRD+HC', 'nTRD vs TRD+HC', 'HC vs TRD+nTRD', 'TRD vs nTRD', 'TRD vs HC', 'nTRD vs HC']}
     results_external = {k: [] for k in results_internal.keys()}
     
     cm_int_history = []
     cm_ext_history = []
     
-    # [新增] ROC 数据容器：用于画置信区间
-    mean_fpr = np.linspace(0, 1, 100) # 统一的横坐标
+    # ROC data container for confidence-interval plotting
+    mean_fpr = np.linspace(0, 1, 100) # Unified x-axis
     roc_data = {'Internal': {}, 'External': {}}
     for ds in ['Internal', 'External']:
         for curve_type in ['TRD vs Others', 'nTRD vs Others', 'HC vs Others', 'Macro Average', 'TRD vs nTRD', 'TRD vs HC']:
             roc_data[ds][curve_type] = []
 
-    # 准备索引
+    # Prepare class indices
     try:
         trd_idx = class_names.index('TRD')
         ntrd_idx = class_names.index('nTRD')
@@ -244,7 +250,7 @@ def main(n_repeats=50, do_optuna=True):
     y_int_test_int = np.argmax(y_int_test.values, axis=1)
     y_ext_test_int = np.argmax(y_ext_test.values, axis=1)
 
-    # 4. 循环 50 次
+    # 4. Repeat 50 runs
     for i in range(1, n_repeats + 1):
         seed = 1000 + i
         
@@ -284,11 +290,11 @@ def main(n_repeats=50, do_optuna=True):
         y_int_pred = np.argmax(preds_val_avg, axis=1)
         y_ext_pred = np.argmax(preds_ext_avg, axis=1)
         
-        # --- (A) 记录混淆矩阵 ---
+        # --- (A) Record confusion matrices ---
         cm_int_history.append(confusion_matrix(y_int_test_int, y_int_pred, labels=class_indices))
         cm_ext_history.append(confusion_matrix(y_ext_test_int, y_ext_pred, labels=class_indices))
         
-        # --- (B) 记录指标 ---
+        # --- (B) Record metrics ---
         def process_metrics(y_true, y_pred, probs, res_dict):
             # Macro
             res_dict['Macro Average'].append(multiclass_macro_metrics(y_true, y_pred, class_indices))
@@ -325,13 +331,13 @@ def main(n_repeats=50, do_optuna=True):
         process_metrics(y_int_test_int, y_int_pred, preds_val_avg, results_internal)
         process_metrics(y_ext_test_int, y_ext_pred, preds_ext_avg, results_external)
 
-        # --- (C) [关键] 收集 ROC 曲线形状 ---
+        # --- (C) [Key] Collect ROC curve shapes ---
         def collect_roc(y_true, y_probs, dataset_key):
             # 1. One-vs-Rest
             for cls_idx, cls_name in zip([trd_idx, ntrd_idx, hc_idx], ['TRD', 'nTRD', 'HC']):
                 y_bin = (y_true == cls_idx).astype(int)
                 fpr, tpr, _ = roc_curve(y_bin, y_probs[:, cls_idx])
-                # 线性插值统一横坐标
+                # Linear interpolation to the unified x-axis
                 tpr_interp = np.interp(mean_fpr, fpr, tpr)
                 tpr_interp[0] = 0.0
                 roc_data[dataset_key][f'{cls_name} vs Others'].append(tpr_interp)
@@ -361,14 +367,14 @@ def main(n_repeats=50, do_optuna=True):
         
         print(f"Run {i}/{n_repeats} completed.")
 
-    # 5. 保存所有文件
+    # 5. Save all output files
     print("\nSaving final outputs...")
     
-    # 1. 保存 ROC 数据 (用于画图)
+    # 1. Save ROC data (for plotting)
     np.save('roc_curves_data.npy', roc_data)
     print("Saved: roc_curves_data.npy")
     
-    # 2. 保存指标汇总 (Table 3)
+    # 2. Save metric summary (Table 3)
     rows = []
     for d_name, d_dict in [('Internal Test', results_internal), ('External Test', results_external)]:
         for cat_name, metrics_list in d_dict.items():
@@ -388,7 +394,7 @@ def main(n_repeats=50, do_optuna=True):
     pd.DataFrame(rows).to_csv('model1_repeat50_summary.csv', index=False)
     print("Saved: model1_repeat50_summary.csv")
     
-    # 3. 保存混淆矩阵统计 (Figure 2)
+    # 3. Save confusion matrix statistics (Figure 2)
     cm_rows = []
     for d_name, stack in [('Internal Test', np.array(cm_int_history)), ('External Test', np.array(cm_ext_history))]:
         mean_mat = np.mean(stack, axis=0)
@@ -409,6 +415,6 @@ def main(n_repeats=50, do_optuna=True):
     print("\nAll tasks completed successfully.")
 
 if __name__ == "__main__":
-    # do_optuna=True 会先运行 Optuna 搜索
-    # n_repeats=50 会运行 50 次验证
+    # do_optuna=True runs Optuna search first
+    # n_repeats=50 runs 50 validation repeats
     main(n_repeats=50, do_optuna=True)

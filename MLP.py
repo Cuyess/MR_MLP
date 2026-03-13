@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import os
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
@@ -14,7 +15,13 @@ y = pd.get_dummies(y, prefix='Group')
 gender = pd.get_dummies(X['Gender'], prefix='Gender')
 X = X.drop(columns=['Gender'])
 
-external_test_indices = pd.read_csv("external test.csv", header=None).values.flatten()
+if os.path.exists("external_test.csv"):
+    external_test_file = "external_test.csv"
+elif os.path.exists("external test.csv"):
+    external_test_file = "external test.csv"
+else:
+    raise FileNotFoundError("Missing external test index file. Expected 'external_test.csv' or 'external test.csv'.")
+external_test_indices = pd.read_csv(external_test_file, header=None).values.flatten()
 
 external_test_mask = X.index.isin(external_test_indices)
 X_external_test = X.loc[external_test_mask]
@@ -85,7 +92,7 @@ def evaluate_mlp(trial):
 
     kf = KFold(n_splits=5, shuffle=True, random_state=123)
     cv_scores = []
-    for train_index, val_index in kf.split(X_train_resampled, y_train_resampled):  # 使用SMOTE增强后的数据
+    for train_index, val_index in kf.split(X_train_resampled, y_train_resampled):  # Use SMOTE-augmented data
         X_train_fold, X_val_fold = X_train_resampled.iloc[train_index], X_train_resampled.iloc[val_index]
         y_train_fold, y_val_fold = y_train_resampled[train_index], y_train_resampled[val_index]
 
