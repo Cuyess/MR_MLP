@@ -155,7 +155,7 @@ Use one of these methods to view/edit updated files:
 
 ```bash
 git fetch origin
-git checkout copilot/rewrite-readme-file
+git checkout <your-pr-branch-name>
 git pull
 ```
 
