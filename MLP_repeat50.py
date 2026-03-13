@@ -106,7 +106,12 @@ def load_and_prep_data():
     class_names = [c.split('_',1)[1] for c in y_onehot.columns]
     print(f"Detected Classes: {class_names}")
 
-    external_test_file = "external_test.csv" if os.path.exists("external_test.csv") else "external test.csv"
+    if os.path.exists("external_test.csv"):
+        external_test_file = "external_test.csv"
+    elif os.path.exists("external test.csv"):
+        external_test_file = "external test.csv"
+    else:
+        raise FileNotFoundError("Missing external test index file. Expected 'external_test.csv' or 'external test.csv'.")
     external_test_indices = pd.read_csv(external_test_file, header=None).values.flatten()
     external_test_mask = X.index.isin(external_test_indices)
     
