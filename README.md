@@ -44,7 +44,8 @@ install.packages(c("readxl", "multcomp"))
 
 按脚本逻辑，至少需要以下输入（文件名需与代码一致）：
 
-- `external_test.csv`（推荐）或 `external test.csv`（兼容）：外部测试集样本编号
+- `external_test.csv`（推荐）或 `external test.csv`（兼容）：外部测试集样本编号  
+  （推荐下划线命名，避免文件名空格在命令行或跨平台环境中带来的路径转义问题）
 - R 步骤需要的原始表格（如 `ALFF.xlsx`、`ALFF_sc_fc_coordination.xlsx`、`cov.xlsx`）
 - SHAP 与脑图步骤还需要：
   - `final_model.keras`
